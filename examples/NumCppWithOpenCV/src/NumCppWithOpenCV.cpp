@@ -209,12 +209,14 @@ cv::Mat reDefect(cv::Mat img, cv::Mat mask, cv::Mat c_mask, const int id, const 
         }
     }
     float mean = sum_mask / n_mask;
+    float throd5 = 0;
     if (2 * mean < 200)
-        float throd5 = 1.8 * mean;
+        throd5 = 1.8 * mean;
     else
-        float throd5 = 200;
+        throd5 = 200;
 //    缺陷识别部分，分几类情况识别
 //    对于翘曲上的缺陷，阈值大于throd1，判断为缺陷
+// first dt
     cv::Mat dt = cv::Mat::zeros(dimg.size(), dimg.type());
     for (int row = 0; row < img0.rows; row++) {
         uchar* uc_pixel_test_mask      = test_mask.data + row * test_mask.step;
@@ -233,6 +235,7 @@ cv::Mat reDefect(cv::Mat img, cv::Mat mask, cv::Mat c_mask, const int id, const 
                 uc_pixel      += 3;
                 uc_pixel_test_mask    += 3;
                 uc_pixel_c_mask += 3;
+                uc_pixel_dimg += 3;
             }
             else if (img.channels() == 1)
             {
@@ -241,8 +244,137 @@ cv::Mat reDefect(cv::Mat img, cv::Mat mask, cv::Mat c_mask, const int id, const 
                 uc_pixel      += 1;
                 uc_pixel_test_mask    += 1;
                 uc_pixel_c_mask += 1;
+                uc_pixel_dimg += 1;
             }
         }
     }
-    return cv::Mat();
+    // second dt
+    for (int row = 0; row < img0.rows; row++) {
+        uchar* uc_pixel_test_mask      = test_mask.data + row * test_mask.step;
+        uchar* uc_pixel_c_mask         = c_mask.data + row * c_mask.step;
+        uchar* uc_pixel_dimg           = dimg.data + row * dimg.step;
+        uchar* uc_pixel_img_mean       = img_mean.data + row * img_mean.step;
+        uchar* uc_pixel                = dt.data + row * dt.step;
+        for (int col = 0; col < img0.cols; col++) {
+            if (img0.channels() == 3)
+            {
+                if ((float(uc_pixel_dimg[0]) > throd2) && (uc_pixel_test_mask[0] == 255) && (uc_pixel_c_mask[0] == 0) && (float(uc_pixel_img_mean[0]) > mean))
+                    uc_pixel[0] = 255;
+                if ((float(uc_pixel_dimg[1]) > throd2) && (uc_pixel_test_mask[1] == 255) && (uc_pixel_c_mask[1] == 0) && (float(uc_pixel_img_mean[1]) > mean))
+                    uc_pixel[1] = 255;
+                if ((float(uc_pixel_dimg[2]) > throd2) && (uc_pixel_test_mask[2] == 255) && (uc_pixel_c_mask[2] == 0) && (float(uc_pixel_img_mean[2]) > mean))
+                    uc_pixel[2] = 255;
+                uc_pixel      += 3;
+                uc_pixel_test_mask    += 3;
+                uc_pixel_c_mask += 3;
+                uc_pixel_img_mean += 3;
+                uc_pixel_dimg += 3;
+            }
+            else if (img.channels() == 1)
+            {
+                if ((float(uc_pixel_dimg[0]) > throd2) && (uc_pixel_test_mask[0] == 255) && (uc_pixel_c_mask[0] == 0) && (float(uc_pixel_img_mean[0]) > mean))
+                    uc_pixel[0] = 255;
+                uc_pixel      += 1;
+                uc_pixel_test_mask    += 1;
+                uc_pixel_c_mask += 1;
+                uc_pixel_img_mean += 1;
+                uc_pixel_dimg += 1;
+            }
+        }
+    }
+    // third dt
+    for (int row = 0; row < img0.rows; row++) {
+        uchar* uc_pixel_test_mask      = test_mask.data + row * test_mask.step;
+        uchar* uc_pixel_c_mask         = c_mask.data + row * c_mask.step;
+        uchar* uc_pixel_dimg           = dimg.data + row * dimg.step;
+        uchar* uc_pixel_img_mean       = img_mean.data + row * img_mean.step;
+        uchar* uc_pixel_img0           = img0.data + row * img0.step;
+        uchar* uc_pixel                = dt.data + row * dt.step;
+        for (int col = 0; col < img0.cols; col++) {
+            if (img0.channels() == 3)
+            {
+                if ((float(uc_pixel_dimg[0]) > throd3) && (uc_pixel_dimg[0] > uc_pixel_img_mean[0]) && (uc_pixel_img0[0] > 90) && (uc_pixel_c_mask[0] == 0) && (uc_pixel_test_mask[0] == 255))
+                    uc_pixel[0] = 255;
+                if ((float(uc_pixel_dimg[1]) > throd3) && (uc_pixel_dimg[1] > uc_pixel_img_mean[1]) && (uc_pixel_img0[1] > 90) && (uc_pixel_c_mask[1] == 0) && (uc_pixel_test_mask[1] == 255))
+                    uc_pixel[1] = 255;
+                if ((float(uc_pixel_dimg[2]) > throd3) && (uc_pixel_dimg[2] > uc_pixel_img_mean[2]) && (uc_pixel_img0[2] > 90) && (uc_pixel_c_mask[2] == 0) && (uc_pixel_test_mask[2] == 255))
+                    uc_pixel[2] = 255;
+                uc_pixel            += 3;
+                uc_pixel_test_mask  += 3;
+                uc_pixel_c_mask     += 3;
+                uc_pixel_dimg       += 3;
+                uc_pixel_img0       += 3;
+                uc_pixel_img_mean   += 3;
+
+            }
+            else if (img.channels() == 1)
+            {
+                if ((float(uc_pixel_dimg[0]) > throd3) && (uc_pixel_dimg[0] > uc_pixel_img_mean[0]) && (uc_pixel_img0[0] > 90) && (uc_pixel_c_mask[0] == 0) && (uc_pixel_test_mask[0] == 255))
+                    uc_pixel[0] = 255;
+                uc_pixel            += 1;
+                uc_pixel_test_mask  += 1;
+                uc_pixel_c_mask     += 1;
+                uc_pixel_dimg       += 1;
+                uc_pixel_img0       += 1;
+                uc_pixel_img_mean   += 1;
+            }
+        }
+    }
+    // forth dt
+    for (int row = 0; row < img0.rows; row++) {
+        uchar* uc_pixel_test_mask      = test_mask.data + row * test_mask.step;
+        uchar* uc_pixel_img0         = img0.data + row * img0.step;
+        uchar* uc_pixel                = dt.data + row * dt.step;
+        for (int col = 0; col < img0.cols; col++) {
+            if (img0.channels() == 3)
+            {
+                if ((float(uc_pixel_img0[0]) > throd4) && (uc_pixel_img0[0] > throd5) && (uc_pixel_test_mask[0] == 255))
+                    uc_pixel[0] = 255;
+                if ((float(uc_pixel_img0[1]) > throd4) && (uc_pixel_img0[1] > throd5) && (uc_pixel_test_mask[1] == 255))
+                    uc_pixel[1] = 255;
+                if ((float(uc_pixel_img0[2]) > throd4) && (uc_pixel_img0[2] > throd5) && (uc_pixel_test_mask[2] == 255))
+                    uc_pixel[2] = 255;
+                uc_pixel      += 3;
+                uc_pixel_test_mask    += 3;
+                uc_pixel_img0 += 3;
+            }
+            else if (img.channels() == 1)
+            {
+                if ((float(uc_pixel_img0[0]) > throd4) && (uc_pixel_img0[0] > throd5) && (uc_pixel_test_mask[0] == 255))
+                    uc_pixel[0] = 255;
+                uc_pixel      += 1;
+                uc_pixel_test_mask    += 1;
+                uc_pixel_img0 += 1;
+            }
+        }
+    }
+//    如果是第四层，得到的缺陷dt与原缺陷mask取并集
+    if (id == 4)
+    {
+        for (int row = 0; row < img0.rows; row++) {
+            uchar* uc_pixel_mask      = mask.data + row * mask.step;
+            uchar* uc_pixel                = dt.data + row * dt.step;
+            for (int col = 0; col < img0.cols; col++) {
+                if (img0.channels() == 3)
+                {
+                    if ((uc_pixel_mask[0] == 255) || (uc_pixel[0] == 255))
+                        uc_pixel[0] = 255;
+                    if ((uc_pixel_mask[1] == 255) || (uc_pixel[1] == 255))
+                        uc_pixel[1] = 255;
+                    if ((uc_pixel_mask[2] == 255) || (uc_pixel[2] == 255))
+                        uc_pixel[2] = 255;
+                    uc_pixel      += 3;
+                    uc_pixel_mask    += 3;
+                }
+                else if (img.channels() == 1)
+                {
+                    if ((uc_pixel_mask[0] == 255) || (uc_pixel[0] == 255))
+                        uc_pixel[0] = 255;
+                    uc_pixel      += 1;
+                    uc_pixel_mask    += 1;
+                }
+            }
+        }
+    }
+    return dt;
 }
